@@ -1,0 +1,421 @@
+
+import React, { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { createPageUrl } from "@/utils";
+import { User } from "@/entities/User";
+import { GraduationCap, Menu, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import NotificationBell from "./components/notifications/NotificationBell";
+import ProfileDropdown from "./components/profile/ProfileDropdown";
+
+export default function Layout({ children, currentPageName }) {
+  const location = useLocation();
+  const [user, setUser] = useState(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    checkUser();
+    loadTheme();
+  }, [currentPageName]);
+
+  const loadTheme = () => {
+    const theme = localStorage.getItem("courseZoneTheme") || "default";
+    applyTheme(theme);
+  };
+
+  const applyTheme = (themeId) => {
+    const root = document.documentElement;
+    
+    switch (themeId) {
+      case "day":
+        root.style.setProperty("--theme-bg", "#ffffff");
+        root.style.setProperty("--theme-text", "#000000");
+        root.style.setProperty("--theme-accent", "#1a73e8");
+        document.body.className = "theme-day";
+        break;
+      case "night":
+        root.style.setProperty("--theme-bg", "#121212");
+        root.style.setProperty("--theme-text", "#ffffff");
+        root.style.setProperty("--theme-accent", "#bb86fc");
+        document.body.className = "theme-night";
+        break;
+      case "ocean":
+        root.style.setProperty("--theme-bg", "#e0f7fa");
+        root.style.setProperty("--theme-text", "#004d40");
+        root.style.setProperty("--theme-accent", "#00acc1");
+        document.body.className = "theme-ocean";
+        break;
+      case "rose-gold":
+        root.style.setProperty("--theme-bg", "#fff5f6");
+        root.style.setProperty("--theme-text", "#5e4b56");
+        root.style.setProperty("--theme-accent", "#e39cb1");
+        document.body.className = "theme-rose-gold";
+        break;
+      case "default":
+      default:
+        root.style.setProperty("--theme-bg", "#ffffff");
+        root.style.setProperty("--theme-text", "#000000");
+        root.style.setProperty("--theme-accent", "#d4af37");
+        document.body.className = "theme-default";
+        break;
+    }
+  };
+
+  const checkUser = async () => {
+    try {
+      const currentUser = await User.me();
+      setUser(currentUser);
+      
+      const onMobileSetup = currentPageName === "MobileSetup";
+      
+      // Only redirect to mobile setup if not completed
+      if (currentUser && !currentUser.registration_completed && !onMobileSetup) {
+        window.location.href = createPageUrl("MobileSetup");
+        return;
+      }
+    } catch (error) {
+      setUser(null);
+    }
+  };
+
+  const handleLogin = async () => {
+    try {
+      await User.login();
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <style>
+        {`
+          :root {
+            --primary: #1a202c;
+            --primary-light: #2d3748;
+            --accent: #f6ad55;
+            --accent-light: #fbd38d;
+            --text: #2d3748;
+            --text-light: #718096;
+            --border: #e2e8f0;
+          }
+          
+          .theme-day {
+            --theme-bg: #ffffff;
+            --theme-text: #000000;
+            --theme-accent: #1a73e8;
+          }
+          
+          .theme-night {
+            --theme-bg: #121212;
+            --theme-text: #ffffff;
+            --theme-accent: #bb86fc;
+            background: var(--theme-bg);
+            color: var(--theme-text);
+          }
+          
+          .theme-ocean {
+            --theme-bg: #e0f7fa;
+            --theme-text: #004d40;
+            --theme-accent: #00acc1;
+            background: var(--theme-bg);
+            color: var(--theme-text);
+          }
+          
+          .theme-rose-gold {
+            --theme-bg: #fff5f6;
+            --theme-text: #5e4b56;
+            --theme-accent: #e39cb1;
+            background: var(--theme-bg);
+            color: var(--theme-text);
+          }
+          
+          .theme-default {
+            --theme-bg: #ffffff;
+            --theme-text: #000000;
+            --theme-accent: #d4af37;
+          }
+          
+          .theme-night .bg-gradient-to-br {
+            background: linear-gradient(to bottom right, #121212, #1e1e1e, #2a2a2a) !important;
+          }
+          
+          .theme-ocean .bg-gradient-to-br {
+            background: linear-gradient(to bottom right, #e0f7fa, #b2ebf2, #80deea) !important;
+          }
+          
+          .theme-rose-gold .bg-gradient-to-br {
+            background: linear-gradient(to bottom right, #fff5f6, #fce4ec, #f8bbd9) !important;
+          }
+          
+          .theme-night .glass-effect,
+          .theme-ocean .glass-effect,
+          .theme-rose-gold .glass-effect {
+            background: rgba(30, 30, 30, 0.9) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+          }
+          
+          .theme-ocean .glass-effect {
+            background: rgba(224, 247, 250, 0.9) !important;
+            border: 1px solid rgba(0, 172, 193, 0.2) !important;
+          }
+          
+          .theme-rose-gold .glass-effect {
+            background: rgba(255, 245, 246, 0.9) !important;
+            border: 1px solid rgba(227, 156, 177, 0.2) !important;
+          }
+          
+          .theme-night .text-gray-900,
+          .theme-ocean .text-gray-900,
+          .theme-rose-gold .text-gray-900 {
+            color: var(--theme-text) !important;
+          }
+          
+          .theme-night .text-gray-600,
+          .theme-ocean .text-gray-600,
+          .theme-rose-gold .text-gray-600 {
+            color: color-mix(in srgb, var(--theme-text) 70%, transparent) !important;
+          }
+          
+          * {
+            scroll-behavior: smooth;
+          }
+          
+          .glass-effect {
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+          }
+          
+          .hover-lift {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          
+          .hover-lift:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          }
+          
+          .gradient-text {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+          }
+
+          /* Profile Page Button Visibility Fixes */
+          .profile-action-button {
+            font-weight: 500;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            transition: all 0.2s ease-in-out;
+            /* Day mode is the default */
+            background-color: #1a73e8;
+            color: white;
+          }
+          .profile-action-button:hover { 
+            transform: translateY(-1px);
+            filter: brightness(1.1); 
+          }
+
+          .theme-default .profile-action-button { background-color: #d4af37; color: #000; }
+          .theme-night .profile-action-button { background-color: #bb86fc; color: #000; }
+          .theme-ocean .profile-action-button { background-color: #00acc1; color: #fff; }
+          .theme-rose-gold .profile-action-button { background-color: #e39cb1; color: #000; }
+
+          /* --- Premium Popup Styles --- */
+          .premium-popup-container {
+            background-color: var(--theme-bg, #1E1E1E);
+            color: var(--theme-text, #EAEAEA);
+            border: 1px solid var(--theme-accent, #D4AF37);
+            box-shadow: 0 0 40px -10px var(--theme-accent, #D4AF37);
+          }
+          .theme-night .premium-popup-container { background: #1E1E1E; border-color: #D4AF37; box-shadow: 0 0 40px -10px #D4AF37; }
+          .theme-day .premium-popup-container { background: #f0f5ff; border-color: #1a73e8; box-shadow: 0 0 30px -10px #1a73e8;}
+          .theme-ocean .premium-popup-container { background: #004d40; border-color: #00acc1; box-shadow: 0 0 30px -10px #00acc1; }
+          .theme-rose-gold .premium-popup-container { background: #5e4b56; border-color: #e39cb1; box-shadow: 0 0 30px -10px #e39cb1; }
+          .theme-default .premium-popup-container { background: #1E1E1E; border-color: #D4AF37; box-shadow: 0 0 40px -10px #D4AF37; }
+
+          .premium-popup-headline {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(1.75rem, 5vw, 2.5rem);
+            color: var(--theme-accent, #D4AF37);
+            text-shadow: 0 0 8px var(--theme-accent, #D4AF37);
+          }
+          
+          .premium-popup-close-icon { color: var(--theme-text); opacity: 0.7; }
+          .premium-popup-close-icon:hover { opacity: 1; }
+
+          .premium-popup-feature-card {
+             background-color: color-mix(in srgb, var(--theme-bg, #1E1E1E) 90%, transparent);
+             border: 1px solid color-mix(in srgb, var(--theme-accent, #D4AF37) 30%, transparent);
+             border-radius: 8px; padding: 0.75rem; display: flex; align-items: center; gap: 0.75rem;
+             transition: all 0.3s ease;
+          }
+          .premium-popup-feature-card:hover { border-color: var(--theme-accent, #D4AF37); transform: translateY(-2px); }
+          .premium-popup-feature-icon { color: var(--theme-accent, #D4AF37); }
+          
+          .premium-popup-urgency-headline { font-weight: 600; color: var(--theme-accent, #D4AF37); }
+          .premium-popup-time-block { background: color-mix(in srgb, var(--theme-bg, #1E1E1E) 50%, black); padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid color-mix(in srgb, var(--theme-accent, #D4AF37) 20%, transparent); text-align: center; }
+          .premium-popup-time-value { font-size: 1.5rem; font-weight: 700; }
+          .premium-popup-time-label { font-size: 0.6rem; text-transform: uppercase; opacity: 0.7; }
+          .premium-popup-time-separator { font-size: 1.5rem; color: var(--theme-accent, #D4AF37); animation: blink 2s infinite; }
+          
+          .premium-popup-cta-button { 
+            display: inline-block; padding: 0.75rem 2rem; font-size: 1.1rem; font-weight: 600;
+            background: var(--theme-accent, #D4AF37);
+            color: var(--theme-bg, #121212);
+            border-radius: 50px; text-decoration: none; cursor: pointer; transition: all 0.3s ease;
+            box-shadow: 0 0 15px -5px var(--theme-accent, #D4AF37);
+          }
+          .theme-day .premium-popup-cta-button, .theme-ocean .premium-popup-cta-button { color: #fff; }
+
+          .premium-popup-cta-button:hover { transform: scale(1.05); box-shadow: 0 0 25px -5px var(--theme-accent, #D4AF37); }
+          
+          .premium-popup-trust-text { font-size: 0.8rem; opacity: 0.7; }
+          .premium-popup-expired-text { color: #ff4d4d; }
+          
+          .premium-popup-orb-bg { background: radial-gradient(circle, var(--theme-accent, #FFD700) 0%, transparent 60%); }
+          .premium-popup-orb-shadow { box-shadow: 0 0 20px var(--theme-accent, #D4AF37), 0 0 40px var(--theme-accent, #D4AF37); }
+          .premium-popup-orb-ring { border-top-color: color-mix(in srgb, var(--theme-text) 30%, transparent); }
+          .premium-popup-orb-animation { animation: rotate 25s infinite linear, pulse 4s infinite ease-in-out; }
+
+          @keyframes rotate { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+          @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.05); opacity: 0.85; } }
+          @keyframes blink { 50% { opacity: 0.5; } }
+        `}
+      </style>
+
+      <nav className="glass-effect sticky top-0 z-50 border-b border-white/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link to={createPageUrl("Home")} className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-2xl font-bold gradient-text">CourseZone</span>
+            </Link>
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center space-x-4">
+              <Link 
+                to={createPageUrl("Home")} 
+                className={`text-sm font-medium transition-colors hover:text-blue-600 ${
+                  currentPageName === "Home" ? "text-blue-600" : "text-gray-600"
+                }`}
+              >
+                Courses
+              </Link>
+              
+              {user ? (
+                <div className="flex items-center space-x-2">
+                  <NotificationBell />
+                  <ProfileDropdown user={user} />
+                </div>
+              ) : (
+                <Button 
+                  onClick={handleLogin}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  Sign In
+                </Button>
+              )}
+            </div>
+
+            {/* Mobile menu button */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+              >
+                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile Navigation */}
+          {isMenuOpen && (
+            <div className="md:hidden py-4 border-t border-white/20">
+              <div className="flex flex-col space-y-3">
+                <Link 
+                  to={createPageUrl("Home")} 
+                  className="text-gray-600 hover:text-blue-600 py-2 transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Courses
+                </Link>
+                
+                {user ? (
+                  <>
+                    <div className="py-2 flex justify-between items-center">
+                      <ProfileDropdown user={user} />
+                      <NotificationBell />
+                    </div>
+                  </>
+                ) : (
+                  <Button 
+                    onClick={() => {
+                      handleLogin();
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600"
+                  >
+                    Sign In
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </nav>
+
+      <main className="flex-1">
+        {children}
+      </main>
+
+      <footer className="bg-slate-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-3 gap-8">
+            <div>
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <GraduationCap className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold">CourseZone</span>
+              </div>
+              <p className="text-gray-400">
+                Premium online courses to accelerate your career and skills.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold mb-4">Quick Links</h3>
+              <div className="space-y-2">
+                <Link to={createPageUrl("Home")} className="block text-gray-400 hover:text-white transition-colors">
+                  All Courses
+                </Link>
+                <Link to={createPageUrl("Dashboard")} className="block text-gray-400 hover:text-white transition-colors">
+                  My Dashboard
+                </Link>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold mb-4">Support</h3>
+              <div className="space-y-2">
+                <p className="text-gray-400">Email: support@coursezone.com</p>
+                <p className="text-gray-400">Phone: +1 (555) 123-4567</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center">
+            <p className="text-gray-400">
+              © 2024 CourseZone. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
