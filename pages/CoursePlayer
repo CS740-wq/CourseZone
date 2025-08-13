@@ -1,0 +1,294 @@
+
+import React, { useState, useEffect } from "react";
+import { User } from "@/entities/User";
+import { Course } from "@/entities/Course";
+import { Purchase } from "@/entities/Purchase";
+import { createPageUrl } from "@/utils";
+import { Play, Download, FileText, ArrowLeft, Lock, ExternalLink } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+export default function CoursePlayerPage() {
+  const [user, setUser] = useState(null);
+  const [course, setCourse] = useState(null);
+  const [hasAccess, setHasAccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    checkAccess();
+  }, []);
+
+  const checkAccess = async () => {
+    setIsLoading(true);
+    
+    try {
+      // Check if user is logged in
+      const currentUser = await User.me();
+      setUser(currentUser);
+
+      // Get course ID from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const courseId = urlParams.get('courseId');
+      
+      if (!courseId) {
+        setError("Course not found");
+        setIsLoading(false);
+        return;
+      }
+
+      // Load course details
+      const courses = await Course.list();
+      const courseData = courses.find(c => c.id === courseId);
+      
+      if (!courseData) {
+        setError("Course not found");
+        setIsLoading(false);
+        return;
+      }
+      
+      setCourse(courseData);
+
+      // Check if user has purchased the course
+      const purchases = await Purchase.filter({ 
+        user_email: currentUser.email,
+        course_id: courseId 
+      });
+      
+      if (purchases.length > 0) {
+        setHasAccess(true);
+      } else {
+        setHasAccess(false);
+        setError("You don't have access to this course. Please purchase it first.");
+      }
+      
+    } catch (error) {
+      console.error("Access check failed:", error);
+      // Redirect to login using built-in login system
+      await User.login();
+    }
+    
+    setIsLoading(false);
+  };
+
+  const getYouTubeEmbedUrl = (url) => {
+    if (!url) return "";
+    
+    // Extract video ID from various YouTube URL formats
+    const videoIdMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/);
+    
+    if (videoIdMatch) {
+      return `https://www.youtube.com/embed/${videoIdMatch[1]}?rel=0&modestbranding=1`;
+    }
+    
+    return url;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading course...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !hasAccess) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-4">
+        <div className="max-w-4xl mx-auto py-8">
+          <Button 
+            variant="outline"
+            onClick={() => window.location.href = createPageUrl("Dashboard")}
+            className="mb-6"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+
+          <Card className="text-center py-12">
+            <CardContent>
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+              <p className="text-gray-600 mb-6">{error}</p>
+              <div className="flex gap-4 justify-center">
+                <Button 
+                  onClick={() => window.location.href = createPageUrl("Home")}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                >
+                  Browse Courses
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => window.location.href = createPageUrl("Dashboard")}
+                >
+                  Back to Dashboard
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <Button 
+            variant="outline"
+            onClick={() => window.location.href = createPageUrl("Dashboard")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Dashboard
+          </Button>
+          
+          <div className="flex items-center gap-2">
+            <Badge className="bg-green-500 hover:bg-green-600">
+              Full Access
+            </Badge>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-8">
+          {/* Video Player */}
+          <div className="lg:col-span-2">
+            <Card className="overflow-hidden">
+              <div className="aspect-video bg-black">
+                {course.video_url ? (
+                  <iframe
+                    src={getYouTubeEmbedUrl(course.video_url)}
+                    title={course.title}
+                    className="w-full h-full"
+                    frameBorder="0"
+                    allowFullScreen
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white">
+                    <div className="text-center">
+                      <Play className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                      <p className="text-lg">Video content coming soon</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <CardContent className="p-6">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                  {course.title}
+                </h1>
+                
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {course.level && (
+                    <Badge variant="outline">{course.level}</Badge>
+                  )}
+                  {course.category && (
+                    <Badge variant="outline">{course.category}</Badge>
+                  )}
+                  {course.duration && (
+                    <Badge variant="outline">{course.duration}</Badge>
+                  )}
+                </div>
+
+                {course.instructor && (
+                  <p className="text-gray-600 mb-4">
+                    <strong>Instructor:</strong> {course.instructor}
+                  </p>
+                )}
+
+                {course.description && (
+                  <div className="prose max-w-none">
+                    <p className="text-gray-700 leading-relaxed">
+                      {course.description}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Course Materials */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  Course Materials
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {course.materials && course.materials.length > 0 ? (
+                  course.materials.map((material, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <FileText className="w-4 h-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{material.title}</p>
+                          <p className="text-xs text-gray-600">{material.type}</p>
+                        </div>
+                      </div>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => window.open(material.url, '_blank')}
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6 text-gray-500">
+                    <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No additional materials available</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Course Progress */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Your Progress</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-6">
+                  <div className="text-3xl font-bold text-green-600 mb-2">0%</div>
+                  <p className="text-gray-600 text-sm">Complete</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
+                    <div className="bg-green-600 h-2 rounded-full" style={{ width: '0%' }}></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Help */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Need Help?</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Having trouble with this course? Our support team is here to help.
+                </p>
+                <Button variant="outline" className="w-full">
+                  Contact Support
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
